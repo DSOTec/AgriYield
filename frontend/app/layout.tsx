@@ -3,6 +3,7 @@ import { Outfit, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
 import { InvestmentProvider } from "@/lib/investment-context"
+import { FarmProvider } from "@/lib/farm-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ToastProvider } from "@/components/ui/toast"
 
@@ -40,7 +41,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ToastProvider>
             <AuthProvider>
-              <InvestmentProvider>{children}</InvestmentProvider>
+              <InvestmentProvider>
+                <FarmProvider>{children}</FarmProvider>
+              </InvestmentProvider>
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>

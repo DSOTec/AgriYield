@@ -32,16 +32,8 @@ export default function SignInPage() {
       await signIn(email, password)
       addToast("Welcome back to AgriYield!", "success")
       
-      // Redirect based on user role - user state will be updated by signIn
-      // We'll use a small delay to ensure state updates
-      setTimeout(() => {
-        const storedUser = localStorage.getItem("agriyield_user")
-        if (storedUser) {
-          const userData = JSON.parse(storedUser)
-          const dashboardPath = userData.role === "farmer" ? "/dashboard/farmer" : "/dashboard/investor"
-          router.push(dashboardPath)
-        }
-      }, 100)
+      // Redirect to farm listing page after successful sign in
+      router.push("/farms")
     } catch (err: any) {
       console.error("Sign in error:", err)
       
