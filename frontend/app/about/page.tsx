@@ -226,6 +226,98 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* How It Works Section */}
+        <section className="py-20 bg-muted/30">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Simple, transparent, and secure — three steps to agricultural prosperity
+              </p>
+            </motion.div>
+
+            <motion.div
+              variants={staggerContainer}
+              initial="initial"
+              whileInView="animate"
+              viewport={{ once: true }}
+              className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto"
+            >
+              {/* Step 1: Fund */}
+              <motion.div variants={fadeInUp}>
+                <Card className="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary">
+                  <CardContent className="p-8 text-center">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg"
+                    >
+                      1
+                    </motion.div>
+                    <h3 className="text-2xl font-bold mb-4">💰 Fund</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Browse verified farm listings and invest in agricultural projects that align with your goals. 
+                      Connect your wallet and fund farms with AGT tokens securely on the blockchain.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Step 2: Farm */}
+              <motion.div variants={fadeInUp}>
+                <Card className="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary">
+                  <CardContent className="p-8 text-center">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                      className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg"
+                    >
+                      2
+                    </motion.div>
+                    <h3 className="text-2xl font-bold mb-4">🌾 Farm</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Farmers receive funding instantly and begin cultivation. Track real-time progress through our 
+                      transparent dashboard with updates, photos, and blockchain-verified milestones.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Step 3: Earn */}
+              <motion.div variants={fadeInUp}>
+                <Card className="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary">
+                  <CardContent className="p-8 text-center">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
+                      className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg"
+                    >
+                      3
+                    </motion.div>
+                    <h3 className="text-2xl font-bold mb-4">📈 Earn</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Harvest season brings returns! Investors earn competitive ROI distributed automatically via 
+                      smart contracts. Withdraw earnings anytime directly to your wallet.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* Core Values Section */}
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">

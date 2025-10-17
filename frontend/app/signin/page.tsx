@@ -21,7 +21,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, user } = useAuth()
   const { addToast } = useToast()
   const router = useRouter()
 
@@ -30,11 +30,30 @@ export default function SignInPage() {
     setIsLoading(true)
     try {
       await signIn(email, password)
-      addToast("Verification code sent to your email", "success")
-      router.push("/verify")
-    } catch (error) {
-      console.error("Sign in error:", error)
-      addToast("Failed to sign in. Please try again.", "error")
+      addToast("Welcome back to AgriYield!", "success")
+      
+      // Redirect based on user role - user state will be updated by signIn
+      // We'll use a small delay to ensure state updates
+      setTimeout(() => {
+        const storedUser = localStorage.getItem("agriyield_user")
+        if (storedUser) {
+          const userData = JSON.parse(storedUser)
+          const dashboardPath = userData.role === "farmer" ? "/dashboard/farmer" : "/dashboard/investor"
+          router.push(dashboardPath)
+        }
+      }, 100)
+    } catch (err: any) {
+      console.error("Sign in error:", err)
+      
+      // Check if verification is required
+      if (err.message === 'EMAIL_VERIFICATION_REQUIRED') {
+        addToast("Please verify your email first", "error")
+        router.push("/verify")
+        return
+      }
+      
+      const errorMessage = err.response?.data?.message || "Invalid email or password. Please try again."
+      addToast(errorMessage, "error")
     } finally {
       setIsLoading(false)
     }

@@ -32,14 +32,6 @@ export function ProtectedRoute({ children, requiredRole, requireWallet = false }
           return
         }
 
-        // Not verified - redirect to verify
-        if (!user.isVerified) {
-          console.log("[ProtectedRoute] User not verified, redirecting to verify")
-          setIsRedirecting(true)
-          router.replace("/verify")
-          return
-        }
-
         // Wrong role - redirect to correct dashboard
         if (requiredRole && user.role !== requiredRole) {
           console.log("[ProtectedRoute] Wrong role, redirecting to correct dashboard")
@@ -92,7 +84,7 @@ export function ProtectedRoute({ children, requiredRole, requireWallet = false }
   }
 
   // Not authenticated or wrong role - show loading while redirecting
-  if (!user || !user.isVerified || (requiredRole && user.role !== requiredRole)) {
+  if (!user || (requiredRole && user.role !== requiredRole)) {
     return (
       <motion.div 
         initial={{ opacity: 0 }}

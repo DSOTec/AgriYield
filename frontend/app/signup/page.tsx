@@ -14,6 +14,7 @@ import Link from "next/link"
 import { ArrowLeft, Mail, Sprout, TrendingUp, Eye, EyeOff, Check, X, Loader2 } from "lucide-react"
 
 export default function SignUpPage() {
+  const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -21,6 +22,7 @@ export default function SignUpPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [role, setRole] = useState<"farmer" | "investor">("investor")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const { signUp } = useAuth()
   const router = useRouter()
 
@@ -36,13 +38,14 @@ export default function SignUpPage() {
     if (!isPasswordValid) return
 
     setIsLoading(true)
+    setError("")
     try {
-      await signUp(email, role, password)
-      // Small delay to ensure state updates propagate before navigation
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await signUp(fullName, email, role, password)
+      // Redirect to verification page
       router.push("/verify")
-    } catch (error) {
-      console.error("Sign up error:", error)
+    } catch (err: any) {
+      console.error("Sign up error:", err)
+      setError(err.response?.data?.message || "Failed to create account. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -71,6 +74,18 @@ export default function SignUpPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -151,6 +166,16 @@ export default function SignUpPage() {
                       <span>Passwords match</span>
                     </div>
                   )}
+                </motion.div>
+              )}
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="text-sm text-red-600 bg-red-50 dark:bg-red-950 p-3 rounded-md"
+                >
+                  {error}
                 </motion.div>
               )}
 

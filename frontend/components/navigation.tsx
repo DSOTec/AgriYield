@@ -54,15 +54,13 @@ export function Navigation() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex md:items-center md:gap-8">
-              {user && (
-                <Link
-                  href="/farm-listings"
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground relative group"
-                >
-                  Farm Listing
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-                </Link>
-              )}
+              <Link
+                href="/farm-listings"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground relative group"
+              >
+                Farm Listing
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
+              </Link>
               <Link
                 href="/marketplace"
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground relative group"
@@ -199,15 +197,13 @@ export function Navigation() {
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden py-4 space-y-4"
             >
-              {user && (
-                <Link
-                  href="/farm-listings"
-                  className="block text-sm font-medium text-muted-foreground hover:text-foreground"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Farm Listing
-                </Link>
-              )}
+              <Link
+                href="/farm-listings"
+                className="block text-sm font-medium text-muted-foreground hover:text-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Farm Listing
+              </Link>
               <Link
                 href="/marketplace"
                 className="block text-sm font-medium text-muted-foreground hover:text-foreground"

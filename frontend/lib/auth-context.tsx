@@ -1,10 +1,13 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { authService, type UserProfile } from "./api/auth.service"
 
 type UserRole = "farmer" | "investor" | null
 
 interface User {
+  id?: string
+  fullName?: string
   email: string
   role: UserRole
   isVerified: boolean
@@ -17,14 +20,15 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, role: UserRole, password: string) => Promise<void>
-  verifyCode: (code: string) => Promise<User>
-  resendCode: () => Promise<void>
+  signUp: (fullName: string, email: string, role: UserRole, password: string) => Promise<void>
+  verifyEmail: (email: string, code: string) => Promise<void>
+  verifyEmailWithToken: (token: string) => Promise<void>
+  resendVerificationCode: (email: string) => Promise<void>
   connectWallet: (address: string) => Promise<void>
+  refreshProfile: () => Promise<void>
   signOut: () => void
   markOnboardingComplete: () => void
-  pendingEmail: string | null
-  pendingRole: UserRole
+  pendingVerificationEmail: string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,76 +36,163 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
-  const [pendingRole, setPendingRole] = useState<UserRole>(null)
-  const [pendingPassword, setPendingPassword] = useState<string | null>(null)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check for existing session in localStorage
-    const storedUser = localStorage.getItem("agriyield_user")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    // Check for existing session and validate token
+    const initAuth = async () => {
+      const storedUser = authService.getStoredUser()
+      const isAuthenticated = authService.isAuthenticated()
+      const pendingEmail = localStorage.getItem('pending_verification_email')
+      
+      if (pendingEmail) {
+        setPendingVerificationEmail(pendingEmail)
+      }
+      
+      if (storedUser && isAuthenticated) {
+        try {
+          // Validate token by fetching profile
+          const profile = await authService.getProfile()
+          setUser({
+            id: profile.id,
+            fullName: profile.fullName,
+            email: profile.email,
+            role: profile.role,
+            isVerified: profile.isVerified,
+            walletConnected: !!profile.walletAddress,
+            walletAddress: profile.walletAddress,
+            hasSeenOnboarding: localStorage.getItem("onboardingComplete") === "true",
+          })
+        } catch (error) {
+          // Token invalid or expired, clear auth data
+          authService.signOut()
+          setUser(null)
+        }
+      }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+
+    initAuth()
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    // Mock Magic Labs sign in - send verification code
-    setPendingEmail(email)
-    setPendingPassword(password)
-    setPendingRole(null)
-    // In production, Magic Labs would send the code
-    console.log("[v0] Verification code sent to:", email)
-    // Return a resolved promise to ensure state is set before navigation
-    return Promise.resolve()
-  }
-
-  const signUp = async (email: string, role: UserRole, password: string) => {
-    // Mock Magic Labs sign up - send verification code
-    setPendingEmail(email)
-    setPendingRole(role)
-    setPendingPassword(password)
-    // In production, Magic Labs would send the code
-    console.log("[v0] Verification code sent to:", email, "Role:", role)
-    // Return a resolved promise to ensure state is set before navigation
-    return Promise.resolve()
-  }
-
-  const verifyCode = async (code: string) => {
-    // Mock verification - in production, verify with Magic Labs
-    if (code.length === 6 && pendingEmail) {
-      const newUser: User = {
-        email: pendingEmail,
-        role: pendingRole,
-        isVerified: true,
-        walletConnected: false,
-        hasSeenOnboarding: false,
+    try {
+      const response = await authService.signIn({ email, password })
+      setUser({
+        id: response.user.id,
+        fullName: response.user.fullName,
+        email: response.user.email,
+        role: response.user.role,
+        isVerified: response.user.isVerified,
+        walletConnected: !!response.user.walletAddress,
+        walletAddress: response.user.walletAddress,
+        hasSeenOnboarding: localStorage.getItem("onboardingComplete") === "true",
+      })
+    } catch (error: any) {
+      // Check if it's a 403 error (email verification required)
+      if (error.response?.status === 403) {
+        setPendingVerificationEmail(email)
+        localStorage.setItem('pending_verification_email', email)
+        const verificationError = new Error('EMAIL_VERIFICATION_REQUIRED')
+        throw verificationError
       }
-      setUser(newUser)
-      localStorage.setItem("agriyield_user", JSON.stringify(newUser))
-      setPendingEmail(null)
-      setPendingRole(null)
-      setPendingPassword(null)
-      return newUser
-    } else {
-      throw new Error("Invalid verification code")
+      throw error
     }
   }
 
-  const resendCode = async () => {
-    if (pendingEmail) {
-      // Mock resending code - in production, call Magic Labs API
-      console.log("[v0] Verification code resent to:", pendingEmail)
-      return Promise.resolve()
+  const signUp = async (fullName: string, email: string, role: UserRole, password: string) => {
+    if (!role) throw new Error("Role is required")
+    
+    try {
+      await authService.signUp({ fullName, email, password, role })
+      // Set pending email for verification
+      setPendingVerificationEmail(email)
+      localStorage.setItem('pending_verification_email', email)
+      // Don't set user yet - they need to verify email first
+    } catch (error) {
+      throw error
     }
-    return Promise.reject(new Error("No pending email"))
+  }
+
+  const verifyEmail = async (email: string, code: string) => {
+    try {
+      const response = await authService.verifyEmail(email, code)
+      setUser({
+        id: response.user.id,
+        fullName: response.user.fullName,
+        email: response.user.email,
+        role: response.user.role,
+        isVerified: response.user.isVerified,
+        walletConnected: !!response.user.walletAddress,
+        walletAddress: response.user.walletAddress,
+        hasSeenOnboarding: false,
+      })
+      setPendingVerificationEmail(null)
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const verifyEmailWithToken = async (token: string) => {
+    try {
+      const response = await authService.verifyEmailWithToken(token)
+      setUser({
+        id: response.user.id,
+        fullName: response.user.fullName,
+        email: response.user.email,
+        role: response.user.role,
+        isVerified: response.user.isVerified,
+        walletConnected: !!response.user.walletAddress,
+        walletAddress: response.user.walletAddress,
+        hasSeenOnboarding: false,
+      })
+      setPendingVerificationEmail(null)
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const resendVerificationCode = async (email: string) => {
+    try {
+      await authService.resendVerificationCode(email)
+    } catch (error) {
+      throw error
+    }
   }
 
   const connectWallet = async (address: string) => {
+    // Mock wallet connection - no backend API call
     if (user) {
-      const updatedUser = { ...user, walletConnected: true, walletAddress: address }
-      setUser(updatedUser)
-      localStorage.setItem("agriyield_user", JSON.stringify(updatedUser))
+      setUser({
+        ...user,
+        walletConnected: true,
+        walletAddress: address,
+      })
+      // Store in localStorage for persistence
+      const storedUser = localStorage.getItem('agriyield_user')
+      if (storedUser) {
+        const userData = JSON.parse(storedUser)
+        userData.walletAddress = address
+        localStorage.setItem('agriyield_user', JSON.stringify(userData))
+      }
+    }
+  }
+
+  const refreshProfile = async () => {
+    try {
+      const profile = await authService.getProfile()
+      setUser({
+        id: profile.id,
+        fullName: profile.fullName,
+        email: profile.email,
+        role: profile.role,
+        isVerified: profile.isVerified,
+        walletConnected: !!profile.walletAddress,
+        walletAddress: profile.walletAddress,
+        hasSeenOnboarding: user?.hasSeenOnboarding || localStorage.getItem("onboardingComplete") === "true",
+      })
+    } catch (error) {
+      throw error
     }
   }
 
@@ -109,16 +200,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       const updatedUser = { ...user, hasSeenOnboarding: true }
       setUser(updatedUser)
-      localStorage.setItem("agriyield_user", JSON.stringify(updatedUser))
+      localStorage.setItem("onboardingComplete", "true")
     }
   }
 
   const signOut = () => {
+    authService.signOut()
     setUser(null)
-    localStorage.removeItem("agriyield_user")
-    setPendingEmail(null)
-    setPendingRole(null)
-    setPendingPassword(null)
   }
 
   return (
@@ -128,13 +216,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         signIn,
         signUp,
-        verifyCode,
-        resendCode,
+        verifyEmail,
+        verifyEmailWithToken,
+        resendVerificationCode,
         connectWallet,
+        refreshProfile,
         signOut,
         markOnboardingComplete,
-        pendingEmail,
-        pendingRole,
+        pendingVerificationEmail,
       }}
     >
       {children}

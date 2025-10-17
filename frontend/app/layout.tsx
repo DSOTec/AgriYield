@@ -2,6 +2,7 @@ import type React from "react"
 import { Outfit, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
+import { InvestmentProvider } from "@/lib/investment-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ToastProvider } from "@/components/ui/toast"
 
@@ -38,7 +39,9 @@ export default function RootLayout({
       <body className="font-sans bg-background text-foreground">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <InvestmentProvider>{children}</InvestmentProvider>
+            </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

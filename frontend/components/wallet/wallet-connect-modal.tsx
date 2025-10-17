@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Wallet, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
@@ -12,42 +14,52 @@ interface WalletConnectModalProps {
   onClose: () => void
 }
 
-const wallets = [
-  {
-    name: "MetaMask",
-    icon: "🦊",
-    description: "Connect using MetaMask browser extension",
-  },
-  {
-    name: "WalletConnect",
-    icon: "🔗",
-    description: "Scan with WalletConnect to connect",
-  },
-  {
-    name: "Coinbase Wallet",
-    icon: "💼",
-    description: "Connect using Coinbase Wallet",
-  },
-  {
-    name: "Trust Wallet",
-    icon: "🛡️",
-    description: "Connect using Trust Wallet",
-  },
-]
-
 export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps) {
-  const [connecting, setConnecting] = useState<string | null>(null)
+  const [connecting, setConnecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [walletAddress, setWalletAddress] = useState("")
   const { connectWallet } = useAuth()
 
-  const handleConnect = async (walletName: string) => {
-    setConnecting(walletName)
-    // Simulate wallet connection - generate mock address
-    setTimeout(async () => {
-      const mockAddress = `0x${Math.random().toString(16).substring(2, 10)}...${Math.random().toString(16).substring(2, 6)}`
-      await connectWallet(mockAddress)
-      setConnecting(null)
+  const generateMockWallet = () => {
+    // Generate a random Ethereum-like address
+    const randomHex = Array.from({ length: 40 }, () => 
+      Math.floor(Math.random() * 16).toString(16)
+    ).join('')
+    return `0x${randomHex}`
+  }
+
+  const handleConnect = async () => {
+    if (!walletAddress) {
+      setError("Please enter a wallet address or generate one")
+      return
+    }
+
+    // Validate wallet address format
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      setError("Invalid wallet address format. Must be 0x followed by 40 hex characters")
+      return
+    }
+
+    setConnecting(true)
+    setError(null)
+    
+    try {
+      // Connect wallet to backend
+      await connectWallet(walletAddress.toLowerCase())
+      
+      setConnecting(false)
       onClose()
-    }, 2000)
+    } catch (err: any) {
+      console.error("Wallet connection error:", err)
+      setError(err.response?.data?.message || err.message || "Failed to connect wallet. Please try again.")
+      setConnecting(false)
+    }
+  }
+
+  const handleGenerateWallet = () => {
+    const newWallet = generateMockWallet()
+    setWalletAddress(newWallet)
+    setError(null)
   }
 
   return (
@@ -65,44 +77,73 @@ export function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps)
                 <Wallet className="h-6 w-6 text-emerald-600" />
                 Connect Wallet
               </DialogTitle>
-              <DialogDescription>Choose your preferred wallet to connect to AgriYield</DialogDescription>
+              <DialogDescription>Enter or generate a mock wallet address for testing</DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 mt-6">
-              {wallets.map((wallet, index) => (
-                <motion.div
-                  key={wallet.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.3 }}
+            <div className="space-y-4 mt-6">
+              <div className="space-y-2">
+                <Label htmlFor="wallet-address">Wallet Address</Label>
+                <Input
+                  id="wallet-address"
+                  type="text"
+                  placeholder="0x..."
+                  value={walletAddress}
+                  onChange={(e) => setWalletAddress(e.target.value)}
+                  className="font-mono text-sm"
+                  disabled={connecting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter a valid Ethereum address (0x + 40 hex characters)
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleGenerateWallet}
+                  disabled={connecting}
                 >
-                  <Button
-                    variant="outline"
-                    className="w-full h-auto p-4 justify-start hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all bg-transparent"
-                    onClick={() => handleConnect(wallet.name)}
-                    disabled={connecting !== null}
-                  >
-                    <div className="flex items-center gap-4 w-full">
-                      <div className="text-3xl">{wallet.icon}</div>
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold">{wallet.name}</div>
-                        <div className="text-xs text-muted-foreground">{wallet.description}</div>
-                      </div>
-                      {connecting === wallet.name && <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />}
-                    </div>
-                  </Button>
-                </motion.div>
-              ))}
+                  Generate Random Wallet
+                </Button>
+                <Button
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={handleConnect}
+                  disabled={connecting || !walletAddress}
+                >
+                  {connecting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Connecting...
+                    </>
+                  ) : (
+                    "Connect Wallet"
+                  )}
+                </Button>
+              </div>
             </div>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400"
+              >
+                {error}
+              </motion.div>
+            )}
 
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.3 }}
-              className="mt-6 p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground"
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm"
             >
-              <p className="text-center">
-                By connecting your wallet, you agree to our Terms of Service and Privacy Policy.
+              <p className="text-amber-800 dark:text-amber-200 font-medium mb-1">
+                🧪 Mock Wallet Mode
+              </p>
+              <p className="text-amber-700 dark:text-amber-300 text-xs">
+                This is a testing environment. Generate a random wallet or enter any valid Ethereum address format for testing purposes.
               </p>
             </motion.div>
           </motion.div>

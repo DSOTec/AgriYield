@@ -11,6 +11,14 @@ export const envConfig = {
   JWT_EXPIRY: process.env.JWT_EXPIRY || "7d",
   MAGIC_SECRET_KEY: process.env.MAGIC_SECRET_KEY || "",
   NODE_ENV: process.env.NODE_ENV || "development",
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
+  
+  // Email Configuration
+  EMAIL_HOST: process.env.EMAIL_HOST || "",
+  EMAIL_PORT: parseInt(process.env.EMAIL_PORT || "587"),
+  EMAIL_USER: process.env.EMAIL_USER || "",
+  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD || "",
+  EMAIL_FROM: process.env.EMAIL_FROM || "",
   //   PINATA_API_KEY: string
   //   PINATA_API_SECRET: string
   //   CONTRACT_FARM_REGISTRY: string

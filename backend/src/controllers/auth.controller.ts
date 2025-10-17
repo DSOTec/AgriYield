@@ -6,6 +6,283 @@ import type { AuthRequest } from "../middleware/auth.middleware"
 export class AuthController {
 
     /**
+     * POST /auth/signup-password
+     * Register a new user with email/password (traditional auth)
+     */
+    static async signupPassword(req: Request, res: Response): Promise<void> {
+        try {
+            const { email, name, password, role, farmName, farmDescription, location, nin } = req.body
+
+            // Validate farmer fields
+            if (role === "farmer") {
+                if (!farmName || farmName.trim() === "") {
+                    res.status(400).json({
+                        success: false,
+                        message: "Farm name is required for farmer registration",
+                    })
+                    return
+                }
+                if (!location || location.trim() === "") {
+                    res.status(400).json({
+                        success: false,
+                        message: "Location is required for farmer registration",
+                    })
+                    return
+                }
+            }
+
+            // Check if user already exists
+            const existingUser = await AuthService.userExists(email)
+            if (existingUser) {
+                res.status(409).json({
+                    success: false,
+                    message: "User with this email already exists",
+                })
+                return
+            }
+
+            // Register user with password
+            const user = await AuthService.registerUserWithPassword({
+                email,
+                name,
+                password,
+                role,
+                farmName,
+                farmDescription,
+                location,
+                nin,
+            })
+
+            // Generate JWT token
+            const token = AuthService.generateToken(String(user._id), user.email, user.role)
+            console.log(token)
+
+            res.status(201).json({
+                success: true,
+                message: "User registered successfully",
+                token,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    fullName: user.name,
+                    role: user.role,
+                    farmName: user.farmName,
+                    location: user.location,
+                    walletAddress: user.walletAddress,
+                    isVerified: user.verified,
+                    createdAt: user.createdAt,
+                },
+            })
+        } catch (error: any) {
+            console.error("Signup error:", error)
+            res.status(500).json({
+                success: false,
+                message: error.message || "Registration failed",
+            })
+        }
+    }
+
+    /**
+     * POST /auth/signin-password
+     * Sign in with email/password (traditional auth)
+     */
+    static async signinPassword(req: Request, res: Response): Promise<void> {
+        try {
+            const { email, password } = req.body
+
+            // Authenticate user
+            const { user, token, requiresVerification } = await AuthService.loginWithPassword(email, password)
+
+            if (requiresVerification) {
+                res.status(403).json({
+                    success: false,
+                    message: "Email verification required",
+                    requiresVerification: true,
+                    user: {
+                        email: user.email,
+                        isVerified: user.verified,
+                    },
+                })
+                return
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Sign in successful",
+                token,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    fullName: user.name,
+                    role: user.role,
+                    farmName: user.farmName,
+                    location: user.location,
+                    walletAddress: user.walletAddress,
+                    isVerified: user.verified,
+                    createdAt: user.createdAt,
+                },
+            })
+        } catch (error: any) {
+            console.error("Signin error:", error)
+
+            if (error.message.includes("User not found")) {
+                res.status(404).json({
+                    success: false,
+                    message: "User not found. Please sign up first.",
+                })
+                return
+            }
+
+            if (error.message.includes("Invalid password")) {
+                res.status(401).json({
+                    success: false,
+                    message: "Invalid email or password",
+                })
+                return
+            }
+
+            res.status(401).json({
+                success: false,
+                message: error.message || "Authentication failed",
+            })
+        }
+    }
+
+    /**
+     * POST /auth/verify-email
+     * Verify email with verification code
+     */
+    static async verifyEmail(req: Request, res: Response): Promise<void> {
+        try {
+            const { email, code } = req.body
+
+            const user = await AuthService.verifyEmail(email, code)
+
+            // Generate JWT token after verification
+            const token = AuthService.generateToken(String(user._id), user.email, user.role)
+
+            res.status(200).json({
+                success: true,
+                message: "Email verified successfully",
+                token,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    fullName: user.name,
+                    role: user.role,
+                    farmName: user.farmName,
+                    location: user.location,
+                    walletAddress: user.walletAddress,
+                    isVerified: user.verified,
+                    createdAt: user.createdAt,
+                },
+            })
+        } catch (error: any) {
+            console.error("Verify email error:", error)
+
+            if (error.message.includes("expired")) {
+                res.status(400).json({
+                    success: false,
+                    message: "Verification code has expired. Please request a new one.",
+                })
+                return
+            }
+
+            if (error.message.includes("Invalid")) {
+                res.status(400).json({
+                    success: false,
+                    message: "Invalid verification code",
+                })
+                return
+            }
+
+            res.status(400).json({
+                success: false,
+                message: error.message || "Email verification failed",
+            })
+        }
+    }
+
+    /**
+     * POST /auth/resend-verification
+     * Resend verification code
+     */
+    static async resendVerification(req: Request, res: Response): Promise<void> {
+        try {
+            const { email } = req.body
+
+            await AuthService.resendVerificationCode(email)
+
+            res.status(200).json({
+                success: true,
+                message: "Verification code sent successfully",
+            })
+        } catch (error: any) {
+            console.error("Resend verification error:", error)
+
+            res.status(400).json({
+                success: false,
+                message: error.message || "Failed to resend verification code",
+            })
+        }
+    }
+
+    /**
+     * GET /auth/verify-token/:token
+     * Verify email with magic link token
+     */
+    static async verifyToken(req: Request, res: Response): Promise<void> {
+        try {
+            const { token } = req.params
+
+            const user = await AuthService.verifyEmailWithToken(token)
+
+            // Generate JWT token after verification
+            const jwtToken = AuthService.generateToken(String(user._id), user.email, user.role)
+
+            res.status(200).json({
+                success: true,
+                message: "Email verified successfully",
+                token: jwtToken,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    fullName: user.name,
+                    role: user.role,
+                    farmName: user.farmName,
+                    location: user.location,
+                    walletAddress: user.walletAddress,
+                    isVerified: user.verified,
+                    createdAt: user.createdAt,
+                },
+            })
+        } catch (error: any) {
+            console.error("Verify token error:", error)
+
+            if (error.message.includes("expired")) {
+                res.status(400).json({
+                    success: false,
+                    message: "Verification link has expired. Please request a new one.",
+                })
+                return
+            }
+
+            if (error.message.includes("Invalid")) {
+                res.status(400).json({
+                    success: false,
+                    message: "Invalid verification link",
+                })
+                return
+            }
+
+            res.status(400).json({
+                success: false,
+                message: error.message || "Email verification failed",
+            })
+        }
+    }
+
+    /**
      * POST /auth/signup
      * Register a new user (investor or farmer)
      */

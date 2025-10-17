@@ -2,9 +2,152 @@ import { Router } from "express"
 import { AuthController } from "../controllers/auth.controller"
 import { validate } from "../middleware/validation.middleware"
 import { authenticate } from "../middleware/auth.middleware"
-import { signupSchema, signinSchema, connectWalletSchema } from "../validators/auth.validator"
+import { signupSchema, signinSchema, connectWalletSchema, signupPasswordSchema, signinPasswordSchema, verifyEmailSchema, resendVerificationSchema } from "../validators/auth.validator"
 
 const router = Router()
+
+/**
+ * @swagger
+ * api/auth/signup-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Register with email/password
+ *     description: Register a new user with traditional email/password authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - password
+ *               - role
+ *             properties:
+ *               email:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [investor, farmer]
+ *               farmName:
+ *                 type: string
+ *               farmDescription:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ */
+router.post("/signup-password", validate(signupPasswordSchema), AuthController.signupPassword)
+
+/**
+ * @swagger
+ * api/auth/signin-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Sign in with email/password
+ *     description: Authenticate user with traditional email/password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Sign in successful
+ */
+router.post("/signin-password", validate(signinPasswordSchema), AuthController.signinPassword)
+
+/**
+ * @swagger
+ * api/auth/verify-email:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Verify email with code
+ *     description: Verify user email address with 6-digit verification code
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - code
+ *             properties:
+ *               email:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ */
+router.post("/verify-email", validate(verifyEmailSchema), AuthController.verifyEmail)
+
+/**
+ * @swagger
+ * api/auth/resend-verification:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Resend verification code
+ *     description: Resend verification code to user email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification code sent successfully
+ */
+router.post("/resend-verification", validate(resendVerificationSchema), AuthController.resendVerification)
+
+/**
+ * @swagger
+ * api/auth/verify-token/{token}:
+ *   get:
+ *     tags:
+ *       - Authentication
+ *     summary: Verify email with magic link token
+ *     description: Verify user email address using magic link token from email
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Verification token from magic link
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ */
+router.get("/verify-token/:token", AuthController.verifyToken)
 
 /**
  * @swagger

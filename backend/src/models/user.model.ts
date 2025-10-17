@@ -24,6 +24,10 @@ export interface IUser extends Document {
   location?: string
   nin?: string
   verified: boolean
+  verificationCode?: string
+  verificationCodeExpiry?: Date
+  verificationToken?: string
+  verificationTokenExpiry?: Date
   kycStatus: KYCStatus
   isActive: boolean
   lastLoginAt?: Date
@@ -46,6 +50,10 @@ const userSchema = new Schema<IUser>(
     location: { type: String, trim: true },
     nin: { type: String, trim: true, sparse: true },
     verified: { type: Boolean, default: false },
+    verificationCode: { type: String, select: false },
+    verificationCodeExpiry: { type: Date, select: false },
+    verificationToken: { type: String, select: false },
+    verificationTokenExpiry: { type: Date, select: false },
     kycStatus: { type: String, enum: ["pending","approved","rejected"], default: "pending" },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date }
